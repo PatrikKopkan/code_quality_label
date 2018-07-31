@@ -143,8 +143,6 @@ class Element:
 
             return [(x + self.parent_element.x, y + self.parent_element.y) for x, y in points]
 
-        elif self.parent_element.type_of_element != 'polygon':
-
     def build(self, dwg):
         if self.type == 'polygon':
             new_el = svgwrite.shapes.Polygon(points=self.points, style=self.style)
