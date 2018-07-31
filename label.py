@@ -74,14 +74,16 @@ def generate_labels(height, width, marks, index, filename='labels.svg'):
     # ))
     dwg.save()
 
+
 class RootElement:
-    def __init__(self, x=1000, y=1000, constructor=svgwrite.Drawing(), elements=[], filename='labels.svg'):
+    def __init__(self, x=1000, y=1000, constructor=svgwrite.Drawing, elements=[], filename='labels.svg'):
         self.constructor = constructor
         self.x = x
         self.y = y
+        self.points = [(x, y)]
         self.elements = elements
         self.type = 'svg'
-        self.filename= filename
+        self.filename = filename
 
     def __getitem__(self, item):
         return self.elements[item]
@@ -91,67 +93,83 @@ class RootElement:
         self.elements[key] = value
 
     def append(self, element):
+        assert type(element) is Element, 'not Element object'
         self.elements.append(element)
 
     def add(self, element):
+        element.parent_element = self
         self.append(element)
 
     def build(self):
         dwg = self.constructor(self.filename, ("{}pt".format(self.y), "{}pt".format(self.y)))
+
         for element in self.elements:
             element.build(dwg)
+        dwg.save()
 
-class Element:
-    def __init__(self, points, type_of_element, parent_element, style,elements=[], relative=True):
+
+class Element(RootElement):
+    def __init__(self, points, type_of_element, style, elements=[], relative=True, text=None, parent_element=None):
         self.type = type_of_element
         self.elements = elements
         self.parent_element = parent_element
-        self.axis = self.count_real_x_y(points, relative)
+        self.points = points
+        self.relative = relative
         self.style = style
+        self.text = text
 
-    def append(self, element):
-        self.elements.append(element)
-
-    def add(self, element):
-        self.append(element)
-
-    def __getitem__(self, item):
-        return self.elements[item]
-
-    def __setitem__(self, key, value):
-        assert type(key) is int, 'index must be number'
-        self.elements[key] = value
-
-    def count_real_x_y(self, points, relative):
-        if not relative:
-            return points
-        if self.parent_element.type_of_element == 'polygon':
-            xmin = None
-            xmax = None
-            ymin = None
-            ymax = None
+    def count_real_x_y(self):
+        if not self.relative:
+            return
+        if self.parent_element.type == 'svg':
+            xmin=0
+            ymin=0
+        else:
+            xmin = self.parent_element.points[0][0]
+            ymin = self.parent_element.points[0][0]
 
             for x, y in self.parent_element.points:
+                print(xmin)
+                print(x)
                 if xmin > x:
                     xmin = x
-                if xmax < x:
-                    xmax = x
                 if ymin > y:
                     ymin = y
-                if ymax < y:
-                    ymax = y
+        points = [(x + xmin, y + ymin) for x, y in self.points]
+        self.points = points
 
-            return [(x + self.parent_element.x, y + self.parent_element.y) for x, y in points]
 
     def build(self, dwg):
+        self.count_real_x_y()
         if self.type == 'polygon':
             new_el = svgwrite.shapes.Polygon(points=self.points, style=self.style)
-            dwg.add(new_el)
-            for element in self.elements:
-                element.build(dwg)
 
+        else:
+            new_el = svgwrite.text.Text(self.text, self.points)
+
+        dwg.add(new_el)
+        for element in self.elements:
+            element.build(dwg)
 
 # test = RelElement(svgwrite.Drawing())
-
 # print(test.params)
-generate_labels(1000, 1000, MARKS, 0)
+
+# generate_labels(1000, 1000, MARKS, 0)
+
+
+drawing = RootElement()
+points = [
+    [50, 50],
+    [100, 50],
+    [100, 100],
+    [50, 100],
+    [50,50]
+]
+
+element = Element(points, 'polygon', style=color(MARKS, 3))
+drawing.add(element)
+points = [(x / 4, y / 4) for x, y in points]
+print(points)
+nested_Element = Element(points, 'text', 'fill:black;', text='Hello')
+element.add(nested_Element)
+drawing.build()
