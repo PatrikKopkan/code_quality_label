@@ -76,29 +76,34 @@ def generate_labels(height, width, marks, index, filename='labels.svg'):
 
 
 class RootElement:
-    def __init__(self, x=1000, y=1000, constructor=svgwrite.Drawing, elements=[], filename='labels.svg'):
+    id = 0
+
+    def __init__(self, x=1000, y=1000, constructor=svgwrite.Drawing, filename='labels.svg'):
         self.constructor = constructor
         self.x = x
         self.y = y
         self.points = [(x, y)]
-        self.elements = elements
+        self.elements = []
         self.type = 'svg'
         self.filename = filename
+        self.id = 1 + RootElement.id
+        RootElement.id += 1
+        # print(self.id)
 
-    def __getitem__(self, item):
-        return self.elements[item]
-
-    def __setitem__(self, key, value):
-        assert type(key) is int, 'index must be number'
-        self.elements[key] = value
+    # def __getitem__(self, item):
+    #     return self.elements[item]
+    #
+    # def __setitem__(self, key, value):
+    #     assert type(key) is int, 'index must be number'
+    #     self.elements[key] = value
 
     def append(self, element):
-        assert type(element) is Element, 'not Element object'
+        # assert type(element) is Element, 'not Element object'
         self.elements.append(element)
-
     def add(self, element):
-        element.parent_element = self
         self.append(element)
+        element.parent_element = self
+        # print(element)
 
     def build(self):
         dwg = self.constructor(self.filename, ("{}pt".format(self.y), "{}pt".format(self.y)))
@@ -107,37 +112,43 @@ class RootElement:
             element.build(dwg)
         dwg.save()
 
+    def __str__(self):
+        return 'id: {} elements: {}'.format(self.id, self.elements)
+
 
 class Element(RootElement):
-    def __init__(self, points, type_of_element, style, elements=[], relative=True, text=None, parent_element=None):
+
+    def __init__(self, points, type_of_element, style, relative=True, text=None, parent_element=None):
         self.type = type_of_element
-        self.elements = elements
+        self.elements =  []
         self.parent_element = parent_element
         self.points = points
         self.relative = relative
         self.style = style
         self.text = text
+        RootElement.id += 1
+        self.id = RootElement.id
+        # print(self.id)
 
     def count_real_x_y(self):
         if not self.relative:
             return
         if self.parent_element.type == 'svg':
-            xmin=0
-            ymin=0
+            xmin = 0
+            ymin = 0
         else:
             xmin = self.parent_element.points[0][0]
             ymin = self.parent_element.points[0][0]
 
             for x, y in self.parent_element.points:
-                print(xmin)
-                print(x)
+                # print(xmin)
+                # print(x)
                 if xmin > x:
                     xmin = x
                 if ymin > y:
                     ymin = y
         points = [(x + xmin, y + ymin) for x, y in self.points]
         self.points = points
-
 
     def build(self, dwg):
         self.count_real_x_y()
@@ -149,7 +160,9 @@ class Element(RootElement):
 
         dwg.add(new_el)
         for element in self.elements:
+            # print(element)
             element.build(dwg)
+
 
 # test = RelElement(svgwrite.Drawing())
 # print(test.params)
@@ -163,13 +176,14 @@ points = [
     [100, 50],
     [100, 100],
     [50, 100],
-    [50,50]
+    [50, 50]
 ]
 
 element = Element(points, 'polygon', style=color(MARKS, 3))
 drawing.add(element)
 points = [(x / 4, y / 4) for x, y in points]
-print(points)
+# print(points)
 nested_Element = Element(points, 'text', 'fill:black;', text='Hello')
 element.add(nested_Element)
+print(nested_Element)
 drawing.build()
