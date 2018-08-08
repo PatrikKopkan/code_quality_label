@@ -19,15 +19,12 @@ def color(marks, index):
     return 'fill:rgb({} {} {});'.format(255, 255, 0)  # yellow label
 
 
-def generate_labels(height, width, marks, index, filename='labels.svg'):
+def generate_labels(height, width, marks, index, container_px=0, container_py=0):
     steps_of_width = width / (2 * len(marks))  # first label has half of width
     steps_of_height = height / (2 * len(marks) - 1)
     height_of_labels = steps_of_height - height / 100
 
-    w_str = "{}pt".format(width)
-    h_str = "{}pt".format(height)
-    dwg = svgwrite.Drawing(filename, (w_str, h_str))
-    label = dwg.add(dwg.g(id='labels', stroke='black'))
+    container = Element([(container_px, container_py)], 'container', '')
     # width /= 2
     for i in range(0, len(marks)):
         points = [
@@ -39,12 +36,12 @@ def generate_labels(height, width, marks, index, filename='labels.svg'):
             [width / 100, 0 + i * steps_of_height]
         ]
 
-        polygon = svgwrite.shapes.Polygon(points=points, style=color(marks, i))
-
-        text = svgwrite.text.Text(marks[i], (width / 20, height_of_labels / 2 + i * steps_of_height + 5))
-
-        label.add(polygon)
-        label.add(text)
+        # polygon = svgwrite.shapes.Polygon(points=points, style=color(marks, i))
+        polygon = Element(points, 'polygon', style=color(marks, i))
+        # text = svgwrite.text.Text(marks[i], (width / 20, height_of_labels / 2 + i * steps_of_height + 5))
+        text = Element([(width / 20, height_of_labels / 2 + i * steps_of_height + 5)], 'text', '', text=marks[i])
+        container.add(polygon)
+        container.add(text)
     pointer = [
         [width / 4 + index * steps_of_width + width / 33 * 3, steps_of_height * index],
         [width / 4 + index * steps_of_width + width / 33 * 2, steps_of_height * index + height_of_labels / 2],
@@ -53,26 +50,25 @@ def generate_labels(height, width, marks, index, filename='labels.svg'):
         [width, steps_of_height * index]
     ]
 
-    pointer = svgwrite.shapes.Polygon(points=pointer, style='fill:black;', transform='translate(-36 45.5)')
+    # pointer = svgwrite.shapes.Polygon(points=pointer, style='fill:black;', transform='translate(-36 45.5)')
+    pointer = Element(pointer, 'polygon', style='fill:black;')
     # print(pointer.attribs)
-    label.add(pointer)
+    container.add(pointer)
 
-    border = dwg.add(dwg.g(id='border', stroke='white'))
-    border.add(svgwrite.text.Text(
-        marks[index],
-        (
+    container.add(Element(
+        [(
             width / 4 + index * steps_of_width + width / 33 * 2 + (
                     width - width / 4 + index * steps_of_width + width / 33) / 25,
             steps_of_height * index + height_of_labels / 2 + 5
-        ),
-        style='fill:white;'
+        )], 'text', 'white', text=marks[index]
     )
     )
+
     #
     # border.add(svgwrite.text.Text(
     #   "your skill score: {} ".format(score)
     # ))
-    dwg.save()
+    return container
 
 
 class RootElement:
@@ -83,6 +79,7 @@ class RootElement:
         self.x = x
         self.y = y
         self.points = [(x, y)]
+        # print(self.points)
         self.elements = []
         self.type = 'svg'
         self.filename = filename
@@ -90,9 +87,9 @@ class RootElement:
         RootElement.id += 1
         # print(self.id)
 
-    # def __getitem__(self, item):
-    #     return self.elements[item]
-    #
+    def __getitem__(self, item):
+        return self.elements[item]
+
     # def __setitem__(self, key, value):
     #     assert type(key) is int, 'index must be number'
     #     self.elements[key] = value
@@ -100,6 +97,7 @@ class RootElement:
     def append(self, element):
         # assert type(element) is Element, 'not Element object'
         self.elements.append(element)
+
     def add(self, element):
         self.append(element)
         element.parent_element = self
@@ -113,16 +111,17 @@ class RootElement:
         dwg.save()
 
     def __str__(self):
-        return 'id: {} elements: {}'.format(self.id, self.elements)
+        return 'id: {} size: {} elements: {}'.format(self.id, self.points, self.elements)
 
 
 class Element(RootElement):
 
     def __init__(self, points, type_of_element, style, relative=True, text=None, parent_element=None):
         self.type = type_of_element
-        self.elements =  []
+        self.elements = []
         self.parent_element = parent_element
         self.points = points
+        # print(points)
         self.relative = relative
         self.style = style
         self.text = text
@@ -147,21 +146,62 @@ class Element(RootElement):
                     xmin = x
                 if ymin > y:
                     ymin = y
+        # print(self.points)
         points = [(x + xmin, y + ymin) for x, y in self.points]
         self.points = points
 
     def build(self, dwg):
         self.count_real_x_y()
-        if self.type == 'polygon':
-            new_el = svgwrite.shapes.Polygon(points=self.points, style=self.style)
+        if self.type != 'container':
 
-        else:
-            new_el = svgwrite.text.Text(self.text, self.points)
+            if self.type == 'polygon':
+                new_el = svgwrite.shapes.Polygon(points=self.points, style=self.style)
 
-        dwg.add(new_el)
+            elif self.type == 'text':
+                new_el = svgwrite.text.Text(self.text, (self.points[0][0], self.points[0][1]), fill=self.style)
+
+            dwg.add(new_el)
         for element in self.elements:
             # print(element)
             element.build(dwg)
+
+
+class Table(Element):
+    def __init__(self, points, length_of_row, length_of_column, padding=5, stroke_width=5):
+        self.elements = []  # rows
+        self.points = points
+        self.length_of_row = length_of_row
+        self.length_of_column = length_of_column
+        self.padding = padding
+        self.type = 'table'
+        self.stroke_width = stroke_width
+        self.parent_element = None
+        self.type_of_element = 'table'
+
+    def build(self, dwg):
+        rows = len(self.elements)
+        columns = len(self.elements[0])
+        super().build(dwg)
+        x = self.points[0]
+        y = self.points[1]
+        for r in range(rows):
+            points = [
+                (x, y + r * self.length_of_row),
+                (x + columns * self.length_of_column, y + r * self.length_of_row),
+                (x + columns * self.length_of_column, y + (r + 1) * self.length_of_row),
+                (x, y + (r + 1) * self.length_of_row),
+                (x, y + r * self.length_of_row)
+            ]
+            dwg.add(svgwrite.shapes.Polygon(points, style='fill:none; stroke:black;'))
+        for c in range(columns):
+            points = [
+                (x + c * self.length_of_column, y),
+                (x + (c + 1) * self.length_of_column, y),
+                (x + (c + 1) * self.length_of_column, y + rows * self.length_of_row),
+                (x + c * self.length_of_column, y + rows * self.length_of_row),
+                (x + c * self.length_of_column, y)
+            ]
+            dwg.add(svgwrite.shapes.Polygon(points, style='fill:none; stroke:black;'))
 
 
 # test = RelElement(svgwrite.Drawing())
@@ -171,19 +211,8 @@ class Element(RootElement):
 
 
 drawing = RootElement()
-points = [
-    [50, 50],
-    [100, 50],
-    [100, 100],
-    [50, 100],
-    [50, 50]
-]
+drawing.add(generate_labels(500, 500, MARKS, 2, 50, 50))
 
-element = Element(points, 'polygon', style=color(MARKS, 3))
-drawing.add(element)
-points = [(x / 4, y / 4) for x, y in points]
 # print(points)
-nested_Element = Element(points, 'text', 'fill:black;', text='Hello')
-element.add(nested_Element)
-print(nested_Element)
+
 drawing.build()
