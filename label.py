@@ -28,16 +28,17 @@ def generate_labels(height, width, marks, index, container_px=0, container_py=0)
     # width /= 2
     for i in range(0, len(marks)):
         points = [
-            [width / 100, 0 + i * steps_of_height],
+            [0, 0 + i * steps_of_height],
             [width / 4 + i * steps_of_width, 0 + i * steps_of_height],
             [width / 4 + i * steps_of_width + width / 33, height_of_labels / 2 + i * steps_of_height],
             [width / 4 + i * steps_of_width, height_of_labels + i * steps_of_height],
-            [width / 100, height_of_labels + i * steps_of_height],
-            [width / 100, 0 + i * steps_of_height]
+            [0, height_of_labels + i * steps_of_height],
+            [0, 0 + i * steps_of_height]
         ]
+        print(points)
 
         # polygon = svgwrite.shapes.Polygon(points=points, style=color(marks, i))
-        polygon = Element(points, 'polygon', style=color(marks, i))
+        polygon = Element(points, 'polygon', style=color(marks, i) + 'stroke:black;stroke-width:2;')
         # text = svgwrite.text.Text(marks[i], (width / 20, height_of_labels / 2 + i * steps_of_height + 5))
         text = Element([(width / 20, height_of_labels / 2 + i * steps_of_height + 5)], 'text', '', text=marks[i])
         container.add(polygon)
@@ -68,7 +69,8 @@ def generate_labels(height, width, marks, index, container_px=0, container_py=0)
     # border.add(svgwrite.text.Text(
     #   "your skill score: {} ".format(score)
     # ))
-    return container
+    ymax = height_of_labels + (len(marks) - 1) * steps_of_height
+    return container, ymax
 
 
 class RootElement:
@@ -100,6 +102,8 @@ class RootElement:
 
     def add(self, element):
         self.append(element)
+        # print(element)
+        # print(self)
         element.parent_element = self
         # print(element)
 
@@ -152,7 +156,7 @@ class Element(RootElement):
 
     def build(self, dwg):
         self.count_real_x_y()
-        if self.type != 'container':
+        if self.type != 'container' or self.type == 'table':
 
             if self.type == 'polygon':
                 new_el = svgwrite.shapes.Polygon(points=self.points, style=self.style)
@@ -165,9 +169,13 @@ class Element(RootElement):
             # print(element)
             element.build(dwg)
 
+    def __len__(self):
+        return len(self.elements)
+
 
 class Table(Element):
-    def __init__(self, points, length_of_row, length_of_column, padding=5, stroke_width=5):
+    def __init__(self, points, length_of_row, length_of_column, padding=5, stroke_width=2, parent_element=None,
+                 relative=True):
         self.elements = []  # rows
         self.points = points
         self.length_of_row = length_of_row
@@ -175,33 +183,82 @@ class Table(Element):
         self.padding = padding
         self.type = 'table'
         self.stroke_width = stroke_width
-        self.parent_element = None
+        self.parent_element = parent_element
+        self.relative = relative
         self.type_of_element = 'table'
+        self.id = 1 + RootElement.id
+        RootElement.id += 1
 
     def build(self, dwg):
-        rows = len(self.elements)
-        columns = len(self.elements[0])
-        super().build(dwg)
-        x = self.points[0]
-        y = self.points[1]
-        for r in range(rows):
+        self.count_real_x_y()
+        print(self.points)
+        # for paramater, score, counter in enumerate(self.elements):
+        counter = 0
+        for paramater, score in self.elements.items():  # todo add atribute font-size
+            paramater = svgwrite.text.Text(paramater, (self.points[0][0] + 0.1 * self.length_of_column,
+                                                       self.points[0][1] + (0.5 + counter) * self.length_of_row + 5
+                                                       )
+                                           )
+
+            score = svgwrite.text.Text(score, (self.points[0][0] + 1.1 * self.length_of_column,
+                                               self.points[0][1] + (0.5 + counter) * self.length_of_row + 5
+                                               )
+                                       )
+
+            x = self.points[0][0]
+            y = self.points[0][1]
             points = [
-                (x, y + r * self.length_of_row),
-                (x + columns * self.length_of_column, y + r * self.length_of_row),
-                (x + columns * self.length_of_column, y + (r + 1) * self.length_of_row),
-                (x, y + (r + 1) * self.length_of_row),
-                (x, y + r * self.length_of_row)
+                (x, y + counter * self.length_of_row),
+                (x + self.length_of_column, y + counter * self.length_of_row),
+                (x + self.length_of_column, y + (counter + 1) * self.length_of_row),
+                (x, y + (counter + 1) * self.length_of_row),
+                (x, y + counter * self.length_of_row)
             ]
-            dwg.add(svgwrite.shapes.Polygon(points, style='fill:none; stroke:black;'))
-        for c in range(columns):
-            points = [
-                (x + c * self.length_of_column, y),
-                (x + (c + 1) * self.length_of_column, y),
-                (x + (c + 1) * self.length_of_column, y + rows * self.length_of_row),
-                (x + c * self.length_of_column, y + rows * self.length_of_row),
-                (x + c * self.length_of_column, y)
+            first_column = svgwrite.shapes.Polygon(points, style='fill:none; stroke:black;stroke-width:{};'.format(
+                self.stroke_width))
+
+            points = [  # todo write list comprehnsion
+                (x + self.length_of_column, y + counter * self.length_of_row),
+                (x + self.length_of_column * 2, y + counter * self.length_of_row),
+                (x + self.length_of_column * 2, y + (counter + 1) * self.length_of_row),
+                (x + self.length_of_column, y + (counter + 1) * self.length_of_row),
+                (x + self.length_of_column, y + counter * self.length_of_row)
             ]
-            dwg.add(svgwrite.shapes.Polygon(points, style='fill:none; stroke:black;'))
+
+            second_column = svgwrite.shapes.Polygon(points, style='fill:none; stroke:black;stroke-width:{};'.format(
+                self.stroke_width))
+
+            dwg.add(paramater)
+            dwg.add(score)
+            dwg.add(first_column)
+            dwg.add(second_column)
+            counter += 1
+    # def build(self, dwg): # todo generating n*n tables
+    #     rows = len(self.elements)
+    #     columns = len(self.elements[0])
+    #     super().build(dwg)
+    #     x = self.points[0]
+    #     y = self.points[1]
+    #     for r in range(rows):
+    #         points = [
+    #             (x, y + r * self.length_of_row),
+    #             (x + columns * self.length_of_column, y + r * self.length_of_row),
+    #             (x + columns * self.length_of_column, y + (r + 1) * self.length_of_row),
+    #             (x, y + (r + 1) * self.length_of_row),
+    #             (x, y + r * self.length_of_row)
+    #         ]
+    #         dwg.add(svgwrite.shapes.Polygon(points,
+    #                                         style='fill:none; stroke:black;stroke-width:{};'.format(self.stroke_width)))
+    #     for c in range(columns):
+    #         points = [
+    #             (x + c * self.length_of_column, y),
+    #             (x + (c + 1) * self.length_of_column, y),
+    #             (x + (c + 1) * self.length_of_column, y + rows * self.length_of_row),
+    #             (x + c * self.length_of_column, y + rows * self.length_of_row),
+    #             (x + c * self.length_of_column, y)
+    #         ]
+    #         dwg.add(svgwrite.shapes.Polygon(points,
+    #                                         style='fill:none; stroke:black;stroke-width:{};'.format(self.stroke_width)))
 
 
 # test = RelElement(svgwrite.Drawing())
@@ -211,8 +268,17 @@ class Table(Element):
 
 
 drawing = RootElement()
-drawing.add(generate_labels(500, 500, MARKS, 2, 50, 50))
+container, ymax = generate_labels(500, 500, MARKS, 2, 50, 50)
 
-# print(points)
+# drawing.add(      # do not work
+#     Table([(500, 500)], 30, 30).add(
+#         Element([(5, 5)], 'text', '',text='test')
+#     )
+#             )
 
+table = Table([(0, ymax)], 50, 250)  # length_of_columns should be half of width
+text = Element([(1000, 500)], 'text', '', text='test')
+table.elements = {'test': 'test', 'score': '59'}
+container.add(table)
+drawing.add(container)
 drawing.build()
