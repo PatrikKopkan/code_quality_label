@@ -381,6 +381,13 @@ example_of_json = json.dumps({'label': 'A+',
 
 
 def generate_code_label(json_data, MARKS, path='./labels.svg'):
+    """
+    generate labels with table
+
+    :param json_data: json_data
+    :param MARKS: list of marks of labels
+    :param path: path where to save file
+    """
     table_data, index = data_for_code_label(json_data, MARKS)
     # print(index)
     drawing = RootElement(filename=path)
