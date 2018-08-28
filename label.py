@@ -2,7 +2,6 @@ import svgwrite
 import json
 
 MARKS = ['A+++', 'A++', 'A+', 'A', 'B', 'C', 'D', 'E', 'F']
-print(MARKS)
 
 
 def color(marks, index):
@@ -380,14 +379,20 @@ example_of_json = json.dumps({'label': 'A+',
                               },
                               'percentage': 32})
 
-table_data, index = data_for_code_label(example_of_json, MARKS)
-# print(index)
-drawing = RootElement()
-container, ymax = generate_labels(500, 500, MARKS, index, 50, 50)
 
-table = Table([(0, ymax)], 50, 250)  # length_of_columns should be half of width
-text = Element([(1000, 500)], 'text', '', text='test')
-table.elements = table_data
-container.add(table)
-drawing.add(container)
-drawing.build()
+def generate_code_label(json_data, MARKS):
+    table_data, index = data_for_code_label(json_data, MARKS)
+    # print(index)
+    drawing = RootElement()
+    container, ymax = generate_labels(500, 500, MARKS, index, 50, 50)
+
+    table = Table([(0, ymax + 50)], 50, 250)  # length_of_columns should be half of width
+    text = Element([(1000, 500)], 'text', '', text='test')
+    table.elements = table_data
+    container.add(table)
+    drawing.add(container)
+    drawing.build()
+
+
+if __name__ == 'main':
+    generate_code_label(example_of_json, MARKS)
