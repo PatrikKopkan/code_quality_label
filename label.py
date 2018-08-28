@@ -52,7 +52,7 @@ def generate_labels(height, width, marks, index, container_px=0, container_py=0)
             [0, height_of_labels + i * steps_of_height],
             [0, 0 + i * steps_of_height]
         ]
-        print(points)
+        # print(points)
 
         # polygon = svgwrite.shapes.Polygon(points=points, style=color(marks, i))
         polygon = Element(points, 'polygon', style=color(marks, i) + 'stroke:black;stroke-width:2;')
@@ -275,7 +275,7 @@ class Table(Element):
         :type dwg: swgwrite.Drawing
         """
         self.count_real_x_y()
-        print(self.points)
+        # print(self.points)
         # for paramater, score, counter in enumerate(self.elements):
         counter = 0
         for paramater, score in self.elements.items():  # todo add atribute font-size
@@ -380,10 +380,10 @@ example_of_json = json.dumps({'label': 'A+',
                               'percentage': 32})
 
 
-def generate_code_label(json_data, MARKS):
+def generate_code_label(json_data, MARKS, path='./labels.svg'):
     table_data, index = data_for_code_label(json_data, MARKS)
     # print(index)
-    drawing = RootElement()
+    drawing = RootElement(filename=path)
     container, ymax = generate_labels(500, 500, MARKS, index, 50, 50)
 
     table = Table([(0, ymax + 50)], 50, 250)  # length_of_columns should be half of width
@@ -394,5 +394,5 @@ def generate_code_label(json_data, MARKS):
     drawing.build()
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
     generate_code_label(example_of_json, MARKS)
