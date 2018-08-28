@@ -247,7 +247,7 @@ class Table(Element):
         :type points: (int,int)
         :param length_of_row: length of row
         :param length_of_column: length of column
-        :param padding: padding of table
+        :param padding: padding of text in table
         :param stroke_width: border width of table
         :type stroke_width: int, float
         :param parent_element: instance of Element or RootElement
@@ -352,12 +352,6 @@ class Table(Element):
 
 drawing = RootElement()
 container, ymax = generate_labels(500, 500, MARKS, 2, 50, 50)
-
-# drawing.add(      # do not work
-#     Table([(500, 500)], 30, 30).add(
-#         Element([(5, 5)], 'text', '',text='test')
-#     )
-#             )
 
 table = Table([(0, ymax)], 50, 250)  # length_of_columns should be half of width
 text = Element([(1000, 500)], 'text', '', text='test')
