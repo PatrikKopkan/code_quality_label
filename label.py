@@ -1,6 +1,8 @@
 import svgwrite
+import json
 
 MARKS = ['A+++', 'A++', 'A+', 'A', 'B', 'C', 'D', 'E', 'F']
+print(MARKS)
 
 
 def color(marks, index):
@@ -344,18 +346,48 @@ class Table(Element):
     #                                         style='fill:none; stroke:black;stroke-width:{};'.format(self.stroke_width)))
 
 
+def data_for_code_label(json_string, marks):
+    data = json.loads(json_string)
+
+    table = {'score': data['score'],
+             'max-score': data['max-score'],
+             'code coverage': data['metrics']['code coverage'],
+             'code duplication': data['metrics']['code duplication'],
+             'percentage': data['percentage']
+             }
+    label = data['label']
+
+    score = data['score']
+    max_score = data['max-score']
+    step_score = max_score / (len(marks) - 1)
+    index = int(score // step_score)
+    reverse_indexes = [x for x in range(len(marks))]
+    revere_indexes = reverse_indexes.reverse()
+    index = reverse_indexes[index]
+
+    return table, index
+
 # test = RelElement(svgwrite.Drawing())
 # print(test.params)
 
 # generate_labels(1000, 1000, MARKS, 0)
+example_of_json = json.dumps({'label': 'A+',
+                              'score': 123,
+                              'max-score': 500,
+                              'metrics': {
+                                  'code coverage': 50,
+                                  'code duplication': 25
+                              },
+                              'percentage': 32})
 
-
+table_data, index = data_for_code_label(example_of_json, MARKS)
+# print(index)
 drawing = RootElement()
-container, ymax = generate_labels(500, 500, MARKS, 2, 50, 50)
+container, ymax = generate_labels(500, 500, MARKS, index, 50, 50)
 
 table = Table([(0, ymax)], 50, 250)  # length_of_columns should be half of width
 text = Element([(1000, 500)], 'text', '', text='test')
-table.elements = {'test': 'test', 'score': '59'}
+table.elements = table_data
 container.add(table)
 drawing.add(container)
 drawing.build()
