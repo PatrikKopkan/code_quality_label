@@ -4,6 +4,13 @@ MARKS = ['A+++', 'A++', 'A+', 'A', 'B', 'C', 'D', 'E', 'F']
 
 
 def color(marks, index):
+    """
+    function generating color
+
+    :param marks:
+    :param index:
+    :return: string of color
+    """
     steps_of_color = int(256 / len(marks) * 2) - 1
     index_of_yellow_label = int(len(marks) / 2)
 
@@ -20,6 +27,15 @@ def color(marks, index):
 
 
 def generate_labels(height, width, marks, index, container_px=0, container_py=0):
+    """
+    :param height:
+    :param width:
+    :param marks: list of marks
+    :param index: which label to point in marks
+    :param container_px: x position of container
+    :param container_py: y position of container
+    :return: container which contains paramaters of generated labels
+    """
     steps_of_width = width / (2 * len(marks))  # first label has half of width
     steps_of_height = height / (2 * len(marks) - 1)
     height_of_labels = steps_of_height - height / 100
@@ -74,9 +90,19 @@ def generate_labels(height, width, marks, index, container_px=0, container_py=0)
 
 
 class RootElement:
+    """
+    Class to implement behavior of relative axis in svg.
+    """
     id = 0
 
     def __init__(self, x=1000, y=1000, constructor=svgwrite.Drawing, filename='labels.svg'):
+        """
+
+        :param x: x size of svg element in svg
+        :param y: y size of svg element in svg
+        :param constructor: constructor of library svgwrite for element
+        :param filename: filename or path to save
+        """
         self.constructor = constructor
         self.x = x
         self.y = y
@@ -97,10 +123,20 @@ class RootElement:
     #     self.elements[key] = value
 
     def append(self, element):
+        """
+        adds element to list of elements
+        :param element: instance of Element
+        :type element: Element
+        """
         # assert type(element) is Element, 'not Element object'
         self.elements.append(element)
 
     def add(self, element):
+        """
+        calls append and set element.parent_element to self
+        :param element: instance of Element
+        :type element: Element
+        """
         self.append(element)
         # print(element)
         # print(self)
@@ -108,6 +144,9 @@ class RootElement:
         # print(element)
 
     def build(self):
+        """
+        generate svg document
+        """
         dwg = self.constructor(self.filename, ("{}pt".format(self.y), "{}pt".format(self.y)))
 
         for element in self.elements:
@@ -120,7 +159,25 @@ class RootElement:
 
 class Element(RootElement):
 
+
+    """
+    Class to implement behavior of relative axis in svg.
+    """
     def __init__(self, points, type_of_element, style, relative=True, text=None, parent_element=None):
+        """
+        :param self:
+        :param points: tuple or list of x points and y points
+        :type points: ((int),(int))
+        :param type_of_element: tells which element of svg, you want to create
+        :type type_of_element: str
+        :param style: style of element to pass
+        :type style: str
+        :param relative: if set to True, object will calculate absolute axis.
+        :param text: text for text element in svg, leave None if type_of_element is not 'text'
+        :param parent_element: element from which will be generated absolute axis
+        :type relative: bool
+        """
+
         self.type = type_of_element
         self.elements = []
         self.parent_element = parent_element
@@ -134,6 +191,7 @@ class Element(RootElement):
         # print(self.id)
 
     def count_real_x_y(self):
+        """counts absolute axis if self.realative is set to True"""
         if not self.relative:
             return
         if self.parent_element.type == 'svg':
@@ -155,6 +213,10 @@ class Element(RootElement):
         self.points = points
 
     def build(self, dwg):
+        """ generate svg document
+        :param dwg: object of swgwrite.Drawing
+        :type dwg: swgwrite.Drawing
+        """
         self.count_real_x_y()
         if self.type != 'container' or self.type == 'table':
 
@@ -174,8 +236,25 @@ class Element(RootElement):
 
 
 class Table(Element):
+    """
+    Class which implements Tables in svg
+    """
     def __init__(self, points, length_of_row, length_of_column, padding=5, stroke_width=2, parent_element=None,
                  relative=True):
+        """
+
+        :param points: tuple of starting position of the table
+        :type points: (int,int)
+        :param length_of_row: length of row
+        :param length_of_column: length of column
+        :param padding: padding of table
+        :param stroke_width: border width of table
+        :type stroke_width: int, float
+        :param parent_element: instance of Element or RootElement
+        :type parent_element: Element, RootElement
+        :param relative: if set to True, object will calculate absolute axis.
+        :type relative: bool
+        """
         self.elements = []  # rows
         self.points = points
         self.length_of_row = length_of_row
@@ -185,11 +264,15 @@ class Table(Element):
         self.stroke_width = stroke_width
         self.parent_element = parent_element
         self.relative = relative
-        self.type_of_element = 'table'
         self.id = 1 + RootElement.id
         RootElement.id += 1
 
     def build(self, dwg):
+        """
+        generate svg document
+        :param dwg: object of swgwrite.Drawing
+        :type dwg: swgwrite.Drawing
+        """
         self.count_real_x_y()
         print(self.points)
         # for paramater, score, counter in enumerate(self.elements):
